@@ -7,5 +7,13 @@ class Estadisticas {
   final int defensaEspecial;
   final int velocidad;
 
-  Estadisticas({required this.nombre, required this.hp, required this.ataque, required this.defensa, required this.ataqueEspecial, required this.defensaEspecial, required this.velocidad});
-  }
+  Estadisticas({
+    required this.nombre,
+    required this.hp,
+    required this.ataque,
+    required this.defensa,
+    required this.ataqueEspecial,
+    required this.defensaEspecial,
+    required this.velocidad,
+  });
+}
