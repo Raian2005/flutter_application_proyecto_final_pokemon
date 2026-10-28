@@ -1,7 +1,7 @@
-import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/model/Estadisticas.dart';
-import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/model/GrupoHuevo.dart';
-import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/model/Habilidad.dart';
-import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/model/Tipo.dart';
+import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/Estadisticas.dart';
+import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/GrupoHuevo.dart';
+import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/Habilidad.dart';
+import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/Tipo.dart';
 
 class Pokemon {
   final String id;

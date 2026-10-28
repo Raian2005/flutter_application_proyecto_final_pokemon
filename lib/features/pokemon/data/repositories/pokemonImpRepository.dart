@@ -1,5 +1,5 @@
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/data/dataSource/pokemonRemoteSource.dart';
-import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/model/Pokemon.dart';
+import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/Pokemon.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/repositories/pokemonRepository.dart';
 
 class PokemonImpRepository implements PokemonRepository {
