@@ -2,4 +2,6 @@ import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/doma
 
 abstract interface class PokemonRepository {
   Future<List<Pokemon>> loadAll();
+  Future<bool> toggleFavorite(String pokemonId);
+  Future<List<Pokemon>> getFavorites();
 }
