@@ -13,17 +13,23 @@ class PokemonImpRepository implements PokemonRepository {
   final PokemonLocalDataSource local;
 
   @override
-  Future<List<Pokemon>> loadAll() async {
+  Future<List<Pokemon>> loadAll({int limit = 50, int offset = 0}) async {
+    final cached = await local.getCachePokemons();
+
     try {
-      final remotePokemon = await remote.fetchAll();
-      if (remotePokemon.isNotEmpty){
+      final remotePokemon = await remote.fetchPokemons(limit: limit, offset: offset);
+      if (remotePokemon.isNotEmpty) {
         await local.insertPokemon(remotePokemon);
       }
-    } catch (_){}
+    } catch (e) {
+      if (cached.isEmpty) {
+        throw StateError('Error al cargar Pokémon: $e');
+      }
+    }
 
     final localPokemon = await local.getCachePokemons();
-    if(localPokemon.isEmpty){
-      throw StateError('No hay datos de pokemon disponibles ni en remoto ni en local');
+    if (localPokemon.isEmpty) {
+      throw StateError('No hay datos de Pokémon disponibles ni en remoto ni en local');
     }
 
     return localPokemon.map((item) => item.toDomain()).toList();

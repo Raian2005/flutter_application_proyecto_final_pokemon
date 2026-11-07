@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 class GraphqlClient {
   GraphqlClient({
     http.Client? client,
-    this.endpoint = 'https://beta.pokeapi.co/graphql/v1beta2',
+    this.endpoint = 'https://graphql.pokeapi.co/v1beta2',
   }) : _client = client ?? http.Client();
 
   final http.Client _client;
@@ -16,11 +16,17 @@ class GraphqlClient {
     String document, {
     Map<String, dynamic> variables = const {},
   }) async {
-    final response = await _client.post(
-      Uri.parse(endpoint),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'query': document, 'variables': variables}),
-    );
+    try {
+      final response = await _client
+          .post(
+            Uri.parse(endpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'query': document, 'variables': variables}),
+          )
+          .timeout(const Duration(seconds: 15));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw RemoteFailure('GraphQL respondió con HTTP ${response.statusCode}.');
@@ -40,6 +46,11 @@ class GraphqlClient {
     if (data is! Map) {
       throw const RemoteFailure('GraphQL no devolvió datos.');
     }
-    return Map<String, dynamic>.from(data);
+      return Map<String, dynamic>.from(data);
+    } on Failure {
+      rethrow;
+    } catch (e) {
+      throw RemoteFailure('Error de conexión con GraphQL: $e');
+    }
   }
 }

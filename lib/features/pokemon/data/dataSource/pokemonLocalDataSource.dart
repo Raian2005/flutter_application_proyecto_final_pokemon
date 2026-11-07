@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_application_proyecto_final_pokemon/core/database/databaseHelper.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/data/models/pokemonDto.dart';
 
@@ -35,6 +36,7 @@ class PokemonLocalDataSource {
         );
       }
     });
+    cachePokemonImages(pokemons);
   }
 
   Future<List<PokemonDto>> getCachePokemons() async {
@@ -97,4 +99,21 @@ class PokemonLocalDataSource {
     }
   }
 
+  Future<void> cachePokemonImages(List<PokemonDto> pokemons) async {
+    for (final dto in pokemons) {
+      final domain = dto.toDomain();
+
+      if(domain.arte.isNotEmpty){
+        try {
+          DefaultCacheManager().downloadFile(domain.arte).catchError((_) {});
+        } catch (_) {}
+      }
+
+      if(domain.sprite.isNotEmpty){
+        try {
+          DefaultCacheManager().downloadFile(domain.sprite).catchError((_) {});
+        } catch (_) {}
+      }
+    }
+  }
 }

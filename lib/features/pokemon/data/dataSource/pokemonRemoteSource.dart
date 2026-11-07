@@ -39,26 +39,19 @@ class PokemonRemoteSource {
     }
   ''';
 
-  Future<List<PokemonDto>> fetchAll() async {
-    const pageSize = 100;
-    var offset = 0;
-    final result = <PokemonDto>[];
-
-    while (true) {
-      final data = await client.query(
-        _query,
-        variables: {'limit': pageSize, 'offset': offset},
-      );
-      final rows = data['pokemon_v2_pokemon'];
-      if (rows is! List) {
-        throw StateError('GraphQL no devolvió la colección de Pokémon.');
-      }
-      for (final row in rows.whereType<Map>()) {
-        result.add(PokemonDto.fromGraphql(_normalize(row)));
-      }
-      if (rows.length < pageSize) return result;
-      offset += pageSize;
+  Future<List<PokemonDto>> fetchPokemons({int limit = 50, int offset = 0}) async {
+    final data = await client.query(
+      _query,
+      variables: {'limit': limit, 'offset': offset},
+    );
+    final rows = data['pokemon_v2_pokemon'];
+    if (rows is! List) {
+      throw StateError('GraphQL no devolvió la colección de Pokémon.');
     }
+    return rows
+        .whereType<Map>()
+        .map((row) => PokemonDto.fromGraphql(_normalize(row)))
+        .toList();
   }
 
   Map<String, dynamic> _normalize(Map row) {

@@ -86,13 +86,15 @@ class PokemonDto {
       value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 
   static String _image(String id, {bool shiny = false, bool large = false}) {
-    final suffix = shiny ? '-shiny' : '';
-    final folder = large
-        ? 'other/official-artwork'
-        : 'versions/generation-v/black-white';
-    final file = large
-        ? 'official-artwork$suffix.png'
-        : (shiny ? 'front_shiny.png' : 'front_default.png');
-    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/$folder/$id/$file';
+    if (large) {
+      final suffix = shiny ? 'shiny/' : '';
+      return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/$suffix$id.png';
+    } else {
+      if (shiny) {
+        return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/$id.png';
+      } else {
+        return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/$id.png';
+      }
+    }
   }
 }
