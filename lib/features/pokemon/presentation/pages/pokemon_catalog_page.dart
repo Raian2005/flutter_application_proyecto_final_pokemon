@@ -5,6 +5,8 @@ import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/data
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/data/dataSource/pokemonRemoteSource.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/data/repositories/pokemonImpRepository.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/Pokemon.dart';
+import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/catalog_filters.dart';
+import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/presentation/widgets/filter_sheet.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/presentation/widgets/pokemon_card.dart';
 
 class PokemonCatalogPage extends StatefulWidget {
@@ -16,10 +18,13 @@ class PokemonCatalogPage extends StatefulWidget {
 
 class _PokemonCatalogPageState extends State<PokemonCatalogPage> {
   late final PokemonImpRepository _repository;
-  List<Pokemon> _pokemons = [];
+  final ScrollController _scrollController = ScrollController();
+
+  List<Pokemon> _allPokemons = [];
+  CatalogFilters _filters = const CatalogFilters();
   bool _isLoading = true;
 
-  String? _errorMessage;
+  int _displayLimit = 20;
 
   @override
   void initState() {
@@ -28,140 +33,293 @@ class _PokemonCatalogPageState extends State<PokemonCatalogPage> {
       remote: PokemonRemoteSource(GraphqlClient()),
       local: PokemonLocalDataSource(DatabaseHelper.instance),
     );
+
+    _scrollController.addListener(_onScroll);
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      final totalFiltered = _filteredPokemonsAll.length;
+      if (_displayLimit < totalFiltered) {
+        setState(() {
+          _displayLimit += 20;
+        });
+      }
+    }
+  }
+
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
     try {
-      final list = await _repository.loadAll(limit: 50, offset: 0);
+      final list = await _repository.loadAll();
       setState(() {
-        _pokemons = list;
+        _allPokemons = list;
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error cargando pokemons: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<Pokemon> get _filteredPokemonsAll {
+    var list = _allPokemons.where((p) {
+      if (_filters.query.isNotEmpty) {
+        final q = _filters.query.toLowerCase();
+        final matchName = p.name.toLowerCase().contains(q);
+        final matchId = p.id.contains(q);
+        if (!matchName && !matchId) return false;
+      }
+
+      if (_filters.types.isNotEmpty) {
+        final pokemonTypeNames = p.tipos
+            .map((t) => t.nombre.toLowerCase())
+            .toSet();
+        final matchesAllTypes = _filters.types.every(
+          (ft) => pokemonTypeNames.contains(ft.toLowerCase()),
+        );
+        if (!matchesAllTypes) return false;
+      }
+
+      if (_filters.generation != null) {
+        if (p.regionId != _filters.generation.toString()) return false;
+      }
+
+      return true;
+    }).toList();
+
+    // 4. Ordenación
+    list.sort((a, b) {
+      int cmp;
+      switch (_filters.sort) {
+        case CatalogSort.name:
+          cmp = a.name.compareTo(b.name);
+          break;
+        case CatalogSort.totalBase:
+          final totalA =
+              a.stats.hp +
+              a.stats.ataque +
+              a.stats.defensa +
+              a.stats.ataqueEspecial +
+              a.stats.defensaEspecial +
+              a.stats.velocidad;
+          final totalB =
+              b.stats.hp +
+              b.stats.ataque +
+              b.stats.defensa +
+              b.stats.ataqueEspecial +
+              b.stats.defensaEspecial +
+              b.stats.velocidad;
+          cmp = totalA.compareTo(totalB);
+          break;
+        case CatalogSort.number:
+        default:
+          final idA = int.tryParse(a.id) ?? 0;
+          final idB = int.tryParse(b.id) ?? 0;
+          cmp = idA.compareTo(idB);
+          break;
+      }
+      return _filters.ascending ? cmp : -cmp;
+    });
+
+    return list;
+  }
+
+  Future<void> _openFilters() async {
+    final result = await showFilterSheet(context, initial: _filters);
+    if (result != null) {
       setState(() {
-        _isLoading = false;
-        _errorMessage = e.toString();
+        _filters = result;
+        _displayLimit =
+            20;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final allFiltered = _filteredPokemonsAll;
+    final displayedPokemons = allFiltered.take(_displayLimit).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
-      appBar: AppBar(
-        title: const Text('Pokédex', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
-        ],
-      ),
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
+      body: SafeArea(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Cargando Pokédex...', style: TextStyle(color: Colors.grey)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Pokédex',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${allFiltered.length} de ${_allPokemons.length} Pokémon guardados',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Búsqueda
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
+                onChanged: (v) {
+                  setState(() {
+                    _filters = _filters.copyWith(query: v);
+                    _displayLimit = 20;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre o número...',
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: Colors.grey,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ActionChip(
+                elevation: 0,
+                side: BorderSide(
+                  color: _filters.hasActiveFilters
+                      ? const Color(0xFFE53935)
+                      : Colors.grey.shade300,
+                ),
+                backgroundColor: _filters.hasActiveFilters
+                    ? const Color(0xFFE53935)
+                    : Colors.white,
+                avatar: Icon(
+                  Icons.tune_rounded,
+                  size: 18,
+                  color: _filters.hasActiveFilters
+                      ? Colors.white
+                      : Colors.black87,
+                ),
+                label: Text(
+                  'Filtros${_filters.hasActiveFilters ? ' •' : ''}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _filters.hasActiveFilters
+                        ? Colors.white
+                        : Colors.black87,
+                  ),
+                ),
+                onPressed: _openFilters,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : displayedPokemons.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No se encontraron Pokémon',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    )
+                  : GridView.builder(
+                      controller: _scrollController, // Controlador de scroll
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 1.35,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                      itemCount: displayedPokemons.length,
+                      itemBuilder: (context, index) {
+                        final pokemon = displayedPokemons[index];
+                        return PokemonCard(
+                          pokemon: pokemon,
+                          onTap: () {
+                            print('Tocado: ${pokemon.name}');
+                          },
+                          onFavoriteToggle: () async {
+                            final newFav = await _repository.toggleFavorite(
+                              pokemon.id,
+                            );
+                            setState(() {
+                              final i = _allPokemons.indexWhere(
+                                (p) => p.id == pokemon.id,
+                              );
+                              if (i != -1) {
+                                _allPokemons[i] = Pokemon(
+                                  id: pokemon.id,
+                                  name: pokemon.name,
+                                  nationalDex: pokemon.nationalDex,
+                                  arte: pokemon.arte,
+                                  sprite: pokemon.sprite,
+                                  shinySprite: pokemon.shinySprite,
+                                  shinyArte: pokemon.shinyArte,
+                                  peso: pokemon.peso,
+                                  altura: pokemon.altura,
+                                  tipos: pokemon.tipos,
+                                  habilidades: pokemon.habilidades,
+                                  gruposHuevos: pokemon.gruposHuevos,
+                                  evoId: pokemon.evoId,
+                                  regionId: pokemon.regionId,
+                                  isFavorito: newFav,
+                                  stats: pokemon.stats,
+                                  isForma: pokemon.isForma,
+                                  forma: pokemon.forma,
+                                );
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+            ),
           ],
         ),
-      );
-    }
-
-    if (_errorMessage != null && _pokemons.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-              const SizedBox(height: 12),
-              Text(
-                'No se pudieron cargar los Pokémon',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _loadData,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_pokemons.isEmpty) {
-      return const Center(child: Text('No hay Pokémon disponibles'));
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.35,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
       ),
-        itemCount: _pokemons.length,
-        itemBuilder: (context, index) {
-          final pokemon = _pokemons[index];
-          return PokemonCard(
-            pokemon: pokemon,
-            onTap: () {
-              print('Tocado: ${pokemon.name}');
-            },
-            onFavoriteToggle: () async {
-              final newFav = await _repository.toggleFavorite(pokemon.id);
-              setState(() {
-                _pokemons[index] = Pokemon(
-                  id: pokemon.id,
-                  name: pokemon.name,
-                  nationalDex: pokemon.nationalDex,
-                  arte: pokemon.arte,
-                  sprite: pokemon.sprite,
-                  shinySprite: pokemon.shinySprite,
-                  shinyArte: pokemon.shinyArte,
-                  peso: pokemon.peso,
-                  altura: pokemon.altura,
-                  tipos: pokemon.tipos,
-                  habilidades: pokemon.habilidades,
-                  gruposHuevos: pokemon.gruposHuevos,
-                  evoId: pokemon.evoId,
-                  regionId: pokemon.regionId,
-                  isFavorito: newFav, // 👈 Actualiza el corazón en pantalla
-                  stats: pokemon.stats,
-                  isForma: pokemon.isForma,
-                  forma: pokemon.forma,
-                );
-              });
-            },
-          );
-        },
-      );
+    );
   }
 }

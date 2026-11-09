@@ -39,9 +39,14 @@ class PokemonLocalDataSource {
     cachePokemonImages(pokemons);
   }
 
-  Future<List<PokemonDto>> getCachePokemons() async {
+  Future<List<PokemonDto>> getCachePokemons({int? limit, int? offset}) async {
     final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('pokemons');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'pokemons',
+      orderBy: 'CAST(id AS INTEGER) ASC',
+      limit: limit,
+      offset: offset,
+    );
 
     if (maps.isEmpty) return [];
 
@@ -56,6 +61,12 @@ class PokemonLocalDataSource {
 
       return PokemonDto.fromGraphql(jsonMap);
     }).toList();
+  }
+
+  Future<int> getCachedCount() async {
+    final db = await _dbHelper.database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM pokemons');
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<Set<String>> getFavoriteIds() async {

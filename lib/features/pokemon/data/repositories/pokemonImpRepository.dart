@@ -5,34 +5,39 @@ import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/data
 
 class PokemonImpRepository implements PokemonRepository {
   PokemonImpRepository({
-      required this.remote,
-      required this.local,
+    required this.remote,
+    required this.local,
   });
 
   final PokemonRemoteSource remote;
   final PokemonLocalDataSource local;
 
   @override
-  Future<List<Pokemon>> loadAll({int limit = 50, int offset = 0}) async {
-    final cached = await local.getCachePokemons();
-
-    try {
-      final remotePokemon = await remote.fetchPokemons(limit: limit, offset: offset);
-      if (remotePokemon.isNotEmpty) {
-        await local.insertPokemon(remotePokemon);
-      }
-    } catch (e) {
-      if (cached.isEmpty) {
-        throw StateError('Error al cargar Pokémon: $e');
+  Future<List<Pokemon>> loadAll() async {
+    // 1. Si la base de datos local está vacía, se descargan datos desde GrafQL
+    final totalCached = await local.getCachedCount();
+    if (totalCached == 0) {
+      try {
+        final remotePokemon = await remote.fetchPokemons(limit: 200, offset: 0);
+        if (remotePokemon.isNotEmpty) {
+          await local.insertPokemon(remotePokemon);
+        }
+      } catch (e) {
+        // Manejo de error si no hay internet en la primera ejecución
       }
     }
 
     final localPokemon = await local.getCachePokemons();
     if (localPokemon.isEmpty) {
-      throw StateError('No hay datos de Pokémon disponibles ni en remoto ni en local');
+      throw StateError('No hay datos de Pokémon disponibles ni en remoto ni en local.');
     }
 
     return localPokemon.map((item) => item.toDomain()).toList();
+  }
+
+  @override
+  Future<int> getTotalCachedCount() async {
+    return await local.getCachedCount();
   }
 
   @override
@@ -46,5 +51,4 @@ class PokemonImpRepository implements PokemonRepository {
     final domainList = allCached.map((item) => item.toDomain()).toList();
     return domainList.where((p) => p.isFavorito).toList();
   }
-
 }

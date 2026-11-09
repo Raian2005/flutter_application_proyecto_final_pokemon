@@ -8,33 +8,52 @@ class PokemonRemoteSource {
 
   static const _query = r'''
     query GetPokemon($limit: Int!, $offset: Int!) {
-      pokemon_v2_pokemon(limit: $limit, offset: $offset, order_by: {id: asc}) {
+      pokemon(limit: $limit, offset: $offset, order_by: {id: asc}) {
         id
         name
         height
         weight
         is_default
-        pokemon_v2_pokemontypes { pokemon_v2_type { id name } }
-        pokemon_v2_pokemonabilities {
-          is_hidden
-          pokemon_v2_ability {
+        pokemontypes {
+          type {
             id
             name
-            pokemon_v2_abilityeffecttexts(
+          }
+        }
+        pokemonabilities {
+          is_hidden
+          ability {
+            id
+            name
+            abilityeffecttexts(
               where: {language_id: {_eq: 9}}
               limit: 1
-            ) { effect }
+            ) {
+              effect
+            }
           }
         }
-        pokemon_v2_pokemonstats { base_stat pokemon_v2_stat { name } }
-        pokemon_v2_pokemonspecy {
+        pokemonstats {
+          base_stat
+          stat {
+            name
+          }
+        }
+        pokemonspecy {
           evolution_chain_id
           generation_id
-          pokemon_v2_pokemonegggroups {
-            pokemon_v2_egggroup { id name }
+          pokemonegggroups {
+            egggroup {
+              id
+              name
+            }
           }
         }
-        pokemon_v2_pokemonforms { name form_name is_default }
+        pokemonforms {
+          name
+          form_name
+          is_default
+        }
       }
     }
   ''';
@@ -44,7 +63,7 @@ class PokemonRemoteSource {
       _query,
       variables: {'limit': limit, 'offset': offset},
     );
-    final rows = data['pokemon_v2_pokemon'];
+    final rows = data['pokemon'];
     if (rows is! List) {
       throw StateError('GraphQL no devolvió la colección de Pokémon.');
     }
@@ -56,26 +75,23 @@ class PokemonRemoteSource {
 
   Map<String, dynamic> _normalize(Map row) {
     final pokemon = Map<String, dynamic>.from(row);
-    final species = pokemon['pokemon_v2_pokemonspecy'] is Map
-        ? Map<String, dynamic>.from(pokemon['pokemon_v2_pokemonspecy'])
+    final species = pokemon['pokemonspecy'] is Map
+        ? Map<String, dynamic>.from(pokemon['pokemonspecy'])
         : <String, dynamic>{};
-    final forms = pokemon['pokemon_v2_pokemonforms'] is List
-        ? pokemon['pokemon_v2_pokemonforms'] as List
+    final forms = pokemon['pokemonforms'] is List
+        ? pokemon['pokemonforms'] as List
         : const [];
     final form = forms.whereType<Map>().firstWhere(
       (item) => item['is_default'] != true,
       orElse: () => <String, dynamic>{},
     );
-    pokemon['types'] = pokemon.remove('pokemon_v2_pokemontypes') ?? const [];
-    final abilities = pokemon.remove('pokemon_v2_pokemonabilities');
+    pokemon['types'] = pokemon.remove('pokemontypes') ?? const [];
+    final abilities = pokemon.remove('pokemonabilities');
     pokemon['abilities'] = abilities is List ? abilities : const [];
-    final eggGroups = species['pokemon_v2_pokemonegggroups'];
+    final eggGroups = species['pokemonegggroups'];
     pokemon['eggGroups'] = eggGroups is List ? eggGroups : const [];
-    final stats = pokemon.remove('pokemon_v2_pokemonstats');
+    final stats = pokemon.remove('pokemonstats');
     pokemon['stats'] = stats is List ? stats : const [];
-    for (final type in pokemon['types'].whereType<Map>()) {
-      type['type'] = type.remove('pokemon_v2_type');
-    }
     pokemon['nationalDex'] = pokemon['id'];
     pokemon['regionId'] = species['generation_id'] ?? '';
     pokemon['evolutionIds'] = species['evolution_chain_id'] == null
@@ -84,11 +100,10 @@ class PokemonRemoteSource {
     pokemon['isForma'] = form.isNotEmpty;
     pokemon['forma'] = form['form_name'] ?? form['name'];
     for (final ability in pokemon['abilities'].whereType<Map>()) {
-      final value = ability.remove('pokemon_v2_ability');
-      if (value is Map) {
-        final abilityMap = Map<String, dynamic>.from(value);
+      if (ability['ability'] is Map) {
+        final abilityMap = Map<String, dynamic>.from(ability['ability']);
         abilityMap['effects'] =
-            abilityMap.remove('pokemon_v2_abilityeffecttexts') ?? const [];
+            abilityMap.remove('abilityeffecttexts') ?? const [];
         ability['ability'] = abilityMap;
       }
     }
