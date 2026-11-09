@@ -58,7 +58,7 @@ class PokemonRemoteSource {
     }
   ''';
 
-  Future<List<PokemonDto>> fetchPokemons({int limit = 50, int offset = 0}) async {
+  Future<List<PokemonDto>> fetchPokemons({int limit = 2000, int offset = 0}) async {
     final data = await client.query(
       _query,
       variables: {'limit': limit, 'offset': offset},
