@@ -8,6 +8,7 @@ import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/doma
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/catalog_filters.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/presentation/widgets/filter_sheet.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/presentation/widgets/pokemon_card.dart';
+import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/presentation/pages/pokemon_detail_page.dart';
 
 class PokemonCatalogPage extends StatefulWidget {
   const PokemonCatalogPage({super.key});
@@ -279,7 +280,12 @@ class _PokemonCatalogPageState extends State<PokemonCatalogPage> {
                         return PokemonCard(
                           pokemon: pokemon,
                           onTap: () {
-                            print('Tocado: ${pokemon.name}');
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    PokemonDetailPage(pokemon: pokemon),
+                              ),
+                            );
                           },
                           onFavoriteToggle: () async {
                             final newFav = await _repository.toggleFavorite(
