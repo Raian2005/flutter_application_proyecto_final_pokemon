@@ -13,7 +13,10 @@ class PokemonDetailRemoteSource {
   Future<PokemonDetailData> fetch(Pokemon pokemon) async {
     final id = pokemon.id;
     final pokemonJson = await _get('pokemon/$id');
-    final speciesJson = await _get('pokemon-species/$id');
+    final speciesUrl = '${(pokemonJson['species'] as Map?)?['url'] ?? ''}';
+    final speciesJson = speciesUrl.isEmpty
+        ? await _get('pokemon-species/$id')
+        : await _getUrl(speciesUrl);
 
     final typeNames = (pokemonJson['types'] as List? ?? const [])
         .whereType<Map>()
