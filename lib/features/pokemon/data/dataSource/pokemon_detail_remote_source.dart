@@ -84,28 +84,50 @@ class PokemonDetailRemoteSource {
       evolutions: await _fetchEvolutions(
         speciesJson['evolution_chain'] as Map?,
       ),
-      alternativeForms: (speciesJson['varieties'] as List? ?? const [])
-          .whereType<Map>()
-          .where((item) => item['is_default'] != true)
-          .map((item) {
-            final species = item['pokemon'] as Map?;
-            final url = '${species?['url'] ?? ''}';
-            final formId = RegExp(r'/(\d+)/?$').firstMatch(url)?.group(1);
-            return formId == null
-                ? null
-                : DetailEvolution(
-                    id: formId,
-                    name: '${species?['name'] ?? ''}',
-                    condition: 'Forma alternativa',
-                  );
-          })
-          .whereType<DetailEvolution>()
-          .toList(),
+      alternativeForms: _alternativeForms(speciesJson, id),
       multipliers: multipliers,
       moves: moves,
       generations: moves.map((move) => move.generation).toSet().toList()
         ..sort(),
     );
+  }
+
+  static List<DetailEvolution> _alternativeForms(
+    Map<String, dynamic> species,
+    String currentId,
+  ) {
+    final varieties = species['varieties'];
+    if (varieties is! List) return const [];
+
+    final forms = <DetailEvolution>[];
+    final seenIds = <String>{currentId};
+    for (final variety in varieties.whereType<Map>()) {
+      if (variety['is_default'] == true) continue;
+      final pokemon = variety['pokemon'];
+      if (pokemon is! Map) continue;
+
+      final url = '${pokemon['url'] ?? ''}';
+      final formId = RegExp(r'/(\d+)/?$').firstMatch(url)?.group(1);
+      if (formId == null || !seenIds.add(formId)) continue;
+
+      final name = '${pokemon['name'] ?? ''}';
+      forms.add(
+        DetailEvolution(id: formId, name: name, condition: _formLabel(name)),
+      );
+    }
+    return forms;
+  }
+
+  static String _formLabel(String name) {
+    final normalized = name.toLowerCase();
+    for (final region in ['alola', 'galar', 'hisui', 'paldea']) {
+      if (normalized.endsWith('-$region')) {
+        return 'Forma ${region[0].toUpperCase()}${region.substring(1)}';
+      }
+    }
+    if (normalized.contains('-mega')) return 'Megaforma';
+    if (normalized.contains('-gigantamax')) return 'Gigamax';
+    return 'Forma alternativa';
   }
 
   Future<List<DetailMove>> _loadMoveDetails(List<DetailMove> moves) async {
