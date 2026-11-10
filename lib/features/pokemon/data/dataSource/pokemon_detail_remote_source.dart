@@ -23,6 +23,11 @@ class PokemonDetailRemoteSource {
         .map((item) => '${(item['type'] as Map?)?['name'] ?? ''}')
         .where((name) => name.isNotEmpty)
         .toList();
+    final stats = <String, int>{
+      for (final item in (pokemonJson['stats'] as List? ?? const []))
+        if (item is Map)
+          '${(item['stat'] as Map?)?['name'] ?? ''}': _int(item['base_stat']),
+    };
     final relations = await Future.wait(
       typeNames.map((type) async {
         final typeJson = await _get('type/$type');
@@ -68,6 +73,7 @@ class PokemonDetailRemoteSource {
 
     return PokemonDetailData(
       pokemon: pokemon,
+      stats: stats,
       abilities: (pokemonJson['abilities'] as List? ?? const [])
           .whereType<Map>()
           .map(
@@ -275,6 +281,7 @@ class PokemonDetailRemoteSource {
 class PokemonDetailData {
   const PokemonDetailData({
     required this.pokemon,
+    required this.stats,
     required this.abilities,
     required this.types,
     required this.height,
@@ -288,6 +295,7 @@ class PokemonDetailData {
   });
 
   final Pokemon pokemon;
+  final Map<String, int> stats;
   final List<DetailAbility> abilities;
   final List<String> types;
   final int height;

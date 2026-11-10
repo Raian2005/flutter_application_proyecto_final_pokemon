@@ -212,6 +212,11 @@ class _DetailBody extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         _Section(
+          title: 'Estadísticas',
+          child: _StatsPanel(data: data),
+        ),
+        const SizedBox(height: 14),
+        _Section(
           title: 'Movimientos',
           child: _MovesTable(
             data: data,
@@ -427,6 +432,65 @@ class _RelationRow extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _StatsPanel extends StatelessWidget {
+  const _StatsPanel({required this.data});
+
+  final PokemonDetailData data;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = <String, String>{
+      'hp': 'PS',
+      'attack': 'Ataque',
+      'defense': 'Defensa',
+      'special-attack': 'Ataque especial',
+      'special-defense': 'Defensa especial',
+      'speed': 'Velocidad',
+    };
+    final total = labels.keys.fold<int>(
+      0,
+      (sum, key) => sum + (data.stats[key] ?? 0),
+    );
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Total',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            Text(
+              '$total',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...labels.entries.map((entry) {
+          final value = data.stats[entry.key] ?? 0;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 9),
+            child: Row(
+              children: [
+                Expanded(child: Text(entry.value)),
+                SizedBox(
+                  width: 38,
+                  child: Text(
+                    '$value',
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
 }
 
 class _MovesTable extends StatelessWidget {
