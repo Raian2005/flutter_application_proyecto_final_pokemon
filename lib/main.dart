@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_proyecto_final_pokemon/app_shell.dart';
+import 'package:flutter_application_proyecto_final_pokemon/core/network/sync_connectivity_service.dart';
 import 'package:flutter_application_proyecto_final_pokemon/core/theme/app_theme.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/connectivity/presentation/connectivity_banner.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/favorites/presentation/favorites_page.dart';
@@ -9,6 +10,8 @@ import 'package:flutter_application_proyecto_final_pokemon/features/trivia/prese
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  SyncConnectivityService.instance.startMonitoring();
 
   runApp(const PokedexApp());
 }

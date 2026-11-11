@@ -1,3 +1,4 @@
+import 'package:flutter_application_proyecto_final_pokemon/core/network/sync_connectivity_service.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/data/dataSource/pokemonRemoteSource.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/entities/Pokemon.dart';
 import 'package:flutter_application_proyecto_final_pokemon/features/pokemon/domain/repositories/pokemonRepository.dart';
@@ -14,16 +15,17 @@ class PokemonImpRepository implements PokemonRepository {
 
   @override
   Future<List<Pokemon>> loadAll() async {
-    // 1. Si la base de datos local está vacía, se descargan datos desde GrafQL
+    // Si la base de datos local está vacía, se descargan datos desde GrafQL
     final totalCached = await local.getCachedCount();
     if (totalCached < 1000) {
       try {
         final remotePokemon = await remote.fetchPokemons(limit: 2000);
         if (remotePokemon.isNotEmpty) {
           await local.insertPokemon(remotePokemon);
+          SyncConnectivityService.instance.notifySyncSuccess();
         }
       } catch (e) {
-        // Manejo de error si no hay internet en la primera ejecución
+        SyncConnectivityService.instance.notifySyncError("PokeAPI sin respuesta");
       }
     }
 
