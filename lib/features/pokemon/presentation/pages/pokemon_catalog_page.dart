@@ -95,7 +95,7 @@ class _PokemonCatalogPageState extends State<PokemonCatalogPage> {
       return true;
     }).toList();
 
-    // 4. Ordenación
+    // Ordenación
     list.sort((a, b) {
       int cmp;
       switch (_filters.sort) {
