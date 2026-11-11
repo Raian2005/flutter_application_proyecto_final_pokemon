@@ -1,17 +1,18 @@
-enum Connectivity_status {
+enum SyncState {
   online,
+  syncing,
   offline,
-  apiUnreachable,
+  serviceUnavailable,
 }
 
 class ConnectivityStatus {
-  final Connectivity_status status;
+  final SyncState status;
   final String message;
-  final DateTime lastChecked;
+  final DateTime lastSyncedAt;
 
   const ConnectivityStatus({
     required this.status,
     required this.message,
-    required this.lastChecked
+    required this.lastSyncedAt,
   });
 }
