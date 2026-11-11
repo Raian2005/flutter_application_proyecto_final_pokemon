@@ -15,10 +15,11 @@ class PokemonImpRepository implements PokemonRepository {
 
   @override
   Future<List<Pokemon>> loadAll() async {
-    // Si la base de datos local está vacía, se descargan datos desde GrafQL
     final totalCached = await local.getCachedCount();
     if (totalCached < 1000) {
       try {
+        SyncConnectivityService.instance.notifySyncing();
+
         final remotePokemon = await remote.fetchPokemons(limit: 2000);
         if (remotePokemon.isNotEmpty) {
           await local.insertPokemon(remotePokemon);
